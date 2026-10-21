@@ -35,4 +35,13 @@ Quatre chapitres numérotés, chacun avec sa teinte de rouge :
 - `components/Preloader.tsx` : preloader avec animation Lottie (`public/lottie/amora-loader.json`) ; `public/lottie/amora-heart.json` s'anime à l'inscription.
 - `app/page.tsx` : défilement lissé par Lenis ; `MotionConfig reducedMotion="user"` respecte le réglage « réduire les animations » du système.
 
+## Inscriptions (Supabase)
+
+Le formulaire « Être prévenu » enregistre les adresses dans le projet Supabase **Amora** (région Paris), table `public.subscribers`.
+
+- `lib/subscribe.ts` : envoi depuis le navigateur avec la clé publiable du projet. Elle est faite pour être publique : les règles de la table n'autorisent que l'ajout d'une adresse (ni lecture, ni modification, ni suppression).
+- `supabase/migrations/20261021000000_create_subscribers.sql` : schéma, index unique (une inscription par adresse, sans tenir compte de la casse) et règles d'accès.
+- Consulter ou exporter les inscriptions : Supabase → projet Amora → Table Editor → `subscribers` → Export (CSV).
+- Un projet gratuit se met en pause après 7 jours sans activité. Le réactiver depuis le tableau de bord Supabase si le formulaire affiche une erreur.
+
 Modèle 3D « Parfum Bottle » par AT design studio (Sketchfab, licence Sketchfab Standard — crédit affiché dans le footer).

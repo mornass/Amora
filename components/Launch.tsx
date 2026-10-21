@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Bell } from "lucide-react";
+import { ArrowRight, Bell, LoaderCircle } from "lucide-react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { EASE_EXPO, LAUNCH_DATE } from "@/lib/launch";
 import { tone } from "@/lib/chapters";
+import { subscribe } from "@/lib/subscribe";
 import { Magnetic } from "./Magnetic";
 import { Reveal } from "./Reveal";
 
@@ -55,7 +56,25 @@ export function Launch() {
   // null côté serveur pour éviter tout écart d'hydratation
   const [left, setLeft] = useState<Remaining | null>(null);
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  // Champ piège : invisible pour un visiteur, souvent rempli par les robots
+  const [trap, setTrap] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "created" | "already" | "error">("idle");
+  const sent = status === "created" || status === "already";
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === "loading") return;
+    if (trap) {
+      setStatus("created");
+      return;
+    }
+    setStatus("loading");
+    try {
+      setStatus(await subscribe(email));
+    } catch {
+      setStatus("error");
+    }
+  };
 
   useEffect(() => {
     setLeft(getRemaining());
@@ -103,17 +122,17 @@ export function Launch() {
                 <span aria-hidden className="-my-4 -ml-3 size-16 shrink-0">
                   <DotLottieReact src="/lottie/amora-heart.json" autoplay />
                 </span>
-                Vous serez parmi les premiers à la découvrir.
+                {status === "already"
+                  ? "Vous êtes déjà inscrit : rendez-vous le 21 décembre."
+                  : "Vous serez parmi les premiers à la découvrir."}
               </motion.p>
             ) : (
               <motion.form
                 key="form"
                 exit={{ opacity: 0, y: -12 }}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setSent(true);
-                }}
-                className="group flex items-center gap-3 border-b border-cream/40 pb-4 focus-within:border-cream"
+                onSubmit={onSubmit}
+                aria-busy={status === "loading"}
+                className="group relative flex items-center gap-3 border-b border-cream/40 pb-4 focus-within:border-cream"
               >
                 <Bell className="size-5 shrink-0 text-gold" />
                 <label htmlFor="email" className="sr-only">
@@ -124,22 +143,46 @@ export function Launch() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (status === "error") setStatus("idle");
+                  }}
                   placeholder="Votre e-mail pour être prévenu"
+                  autoComplete="email"
                   className="min-w-0 flex-1 bg-transparent font-serif text-xl outline-none placeholder:text-cream/45 md:text-2xl"
+                />
+                <input
+                  type="text"
+                  name="company"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden
+                  value={trap}
+                  onChange={(e) => setTrap(e.target.value)}
+                  className="absolute -left-[9999px] size-px opacity-0"
                 />
                 <Magnetic strength={0.5}>
                   <button
                     type="submit"
                     aria-label="S'inscrire"
-                    className="grid size-14 shrink-0 place-items-center rounded-full bg-cream text-crimson transition-colors duration-500 hover:bg-gold"
+                    disabled={status === "loading"}
+                    className="grid size-14 shrink-0 place-items-center rounded-full bg-cream text-crimson transition-colors duration-500 hover:bg-gold disabled:opacity-70"
                   >
-                    <ArrowRight className="size-5" />
+                    {status === "loading" ? (
+                      <LoaderCircle className="size-5 animate-spin" />
+                    ) : (
+                      <ArrowRight className="size-5" />
+                    )}
                   </button>
                 </Magnetic>
               </motion.form>
             )}
           </AnimatePresence>
+          {status === "error" && (
+            <p role="alert" className="mt-4 text-sm text-gold">
+              L&apos;inscription n&apos;a pas abouti. Vérifiez votre connexion, puis réessayez.
+            </p>
+          )}
           <p className="mt-4 text-xs text-cream/50">
             Avant-première, échantillon offert et accès à l&apos;édition numérotée.
           </p>
