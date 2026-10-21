@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-blood: #3d030a;
-  --color-wine: #6e0812;
-  --color-crimson: #a50f1c;
-  --color-scarlet: #e1262f;
-  --color-cream: #f7ebe0;
-  --color-gold: #e6c08a;
+  --color-ink: #1c0407;
+  --color-oxblood: #3b050c;
+  --color-wine: #650915;
+  --color-crimson: #a3101f;
+  --color-rouge: #e0232f;
+  --color-blush: #f1c6bd;
+  --color-cream: #f7ece3;
+  --color-gold: #e2bd85;
 
   --font-serif: var(--font-instrument), "Times New Roman", serif;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
@@ -14,17 +16,30 @@
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Variables pilotées au scroll par la scène 3D (triplets RGB) */
+:root {
+  --bg: 163 16 31;
+  --glow: 239 43 52;
+  --gx: 50%;
+  --gy: 48%;
+}
+
 html {
-  background: var(--color-crimson);
+  background: rgb(var(--bg));
   color: var(--color-cream);
   -webkit-font-smoothing: antialiased;
   scrollbar-width: none;
 }
 html::-webkit-scrollbar { display: none; }
 
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: clip; }
+
 body {
   font-family: var(--font-sans);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 ::selection {
@@ -38,7 +53,7 @@ body {
   inset: -50%;
   z-index: 80;
   pointer-events: none;
-  opacity: 0.11;
+  opacity: 0.09;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: grain 0.9s steps(6) infinite;
 }
@@ -53,7 +68,15 @@ body {
 
 .text-outline {
   color: transparent;
-  -webkit-text-stroke: 1px rgb(247 235 224 / 0.35);
+  -webkit-text-stroke: 1px rgb(247 236 227 / 0.4);
+}
+
+/* Libellés : petites capitales espacées, utilisées dans tout le site */
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgb(247 236 227 / 0.7);
 }
 
 @media (prefers-reduced-motion: reduce) {

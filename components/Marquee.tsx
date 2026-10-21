@@ -61,7 +61,7 @@ export function Marquee() {
 
   return (
     // z-0 : le bandeau passe derrière le flacon
-    <section aria-hidden className="relative z-0 -rotate-3 border-y border-cream/20 bg-wine/60 py-6">
+    <section aria-hidden className="relative z-0 my-10 -rotate-3 border-y border-cream/20 bg-ink/40 py-6 backdrop-blur-sm">
       <Row baseVelocity={-2.5}>{item}</Row>
     </section>
   );

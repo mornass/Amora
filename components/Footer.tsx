@@ -1,9 +1,12 @@
 import { ArrowUp } from "lucide-react";
+import { tone } from "@/lib/chapters";
 
 export function Footer() {
   return (
     <footer
+      data-chapter="04 · Lancement"
       data-bottle="outro"
+      {...tone("launch")}
       className="relative z-10 flex flex-col gap-6 border-t border-cream/15 px-5 py-10 text-xs text-cream/60 md:flex-row md:items-center md:justify-between md:px-10"
     >
       <span>© 2026 Maison Amora — Paris</span>

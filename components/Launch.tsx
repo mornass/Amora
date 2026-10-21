@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Bell, Check } from "lucide-react";
 import { EASE_EXPO, LAUNCH_DATE } from "@/lib/launch";
+import { tone } from "@/lib/chapters";
+import { Magnetic } from "./Magnetic";
+import { Reveal } from "./Reveal";
 
 type Remaining = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -62,16 +65,21 @@ export function Launch() {
   return (
     <section
       id="launch"
-      data-bottle="left"
-      className="relative z-10 flex min-h-svh items-center px-5 py-32 md:justify-end md:px-10"
+      data-chapter="04 · Lancement"
+      data-bottle="right"
+      {...tone("launch")}
+      className="relative z-10 flex min-h-svh items-center px-5 py-32 md:px-10"
     >
-      <div className="w-full pt-[38vh] md:w-[46%] md:pt-0">
-        <motion.p {...reveal} className="mb-6 flex items-center gap-4 text-[11px] uppercase tracking-[0.3em] text-cream/70">
-          <span className="h-px w-10 bg-cream/50" /> Lancement mondial
-        </motion.p>
-        <motion.h2 {...reveal} className="font-serif text-5xl leading-[0.95] md:text-[5.5vw]">
-          Le 21 décembre, <em className="text-gold">laissez-vous déclarer.</em>
-        </motion.h2>
+      <div className="w-full pt-[38vh] md:w-[50%] md:pt-0">
+        <motion.div {...reveal} className="mb-10 flex items-center gap-4">
+          <span className="font-serif text-xl italic text-gold">04</span>
+          <span className="h-px w-12 bg-cream/40" />
+          <span className="eyebrow">Lancement mondial</span>
+        </motion.div>
+        <Reveal
+          text="Le 21 décembre, *laissez-vous déclarer.*"
+          className="font-serif text-5xl leading-[0.95] md:text-[5.5vw]"
+        />
 
         <motion.div {...reveal} className="mt-12 grid grid-cols-4 gap-4">
           <Digit value={left?.days ?? null} label="Jours" />
@@ -112,15 +120,17 @@ export function Launch() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Votre e-mail pour être prévenu"
-                  className="min-w-0 flex-1 bg-transparent font-serif text-xl outline-none placeholder:text-cream/50 md:text-2xl"
+                  className="min-w-0 flex-1 bg-transparent font-serif text-xl outline-none placeholder:text-cream/45 md:text-2xl"
                 />
-                <button
-                  type="submit"
-                  aria-label="S'inscrire"
-                  className="grid size-12 shrink-0 place-items-center rounded-full bg-cream text-crimson transition-transform duration-500 hover:scale-110"
-                >
-                  <ArrowRight className="size-5" />
-                </button>
+                <Magnetic strength={0.5}>
+                  <button
+                    type="submit"
+                    aria-label="S'inscrire"
+                    className="grid size-14 shrink-0 place-items-center rounded-full bg-cream text-crimson transition-colors duration-500 hover:bg-gold"
+                  >
+                    <ArrowRight className="size-5" />
+                  </button>
+                </Magnetic>
               </motion.form>
             )}
           </AnimatePresence>
