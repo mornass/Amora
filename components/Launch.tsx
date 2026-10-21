@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Bell, Check } from "lucide-react";
+import { ArrowRight, Bell } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { EASE_EXPO, LAUNCH_DATE } from "@/lib/launch";
 import { tone } from "@/lib/chapters";
 import { Magnetic } from "./Magnetic";
@@ -93,11 +94,16 @@ export function Launch() {
             {sent ? (
               <motion.p
                 key="ok"
+                role="status"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 border-b border-cream/40 pb-4 font-serif text-2xl italic"
+                className="flex items-center gap-2 border-b border-cream/40 pb-4 font-serif text-2xl italic"
               >
-                <Check className="size-5 text-gold" /> Vous serez parmi les premiers à la découvrir.
+                {/* Cœur Lottie qui éclot à l'inscription */}
+                <span aria-hidden className="-my-4 -ml-3 size-16 shrink-0">
+                  <DotLottieReact src="/lottie/amora-heart.json" autoplay />
+                </span>
+                Vous serez parmi les premiers à la découvrir.
               </motion.p>
             ) : (
               <motion.form

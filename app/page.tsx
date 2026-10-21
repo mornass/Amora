@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
+import { MotionConfig } from "motion/react";
 import { Preloader } from "@/components/Preloader";
 import { PerfumeScene } from "@/components/PerfumeScene";
 import { Backdrop } from "@/components/Backdrop";
@@ -10,7 +11,7 @@ import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { Manifesto } from "@/components/Manifesto";
 import { Notes } from "@/components/Notes";
-import { Craft } from "@/components/Craft";
+import { Flacon } from "@/components/Flacon";
 import { Marquee } from "@/components/Marquee";
 import { Launch } from "@/components/Launch";
 import { Footer } from "@/components/Footer";
@@ -40,7 +41,8 @@ export default function Home() {
   const handleComplete = useCallback(() => setReady(true), []);
 
   return (
-    <>
+    // reducedMotion="user" : Motion coupe les déplacements si le système le demande
+    <MotionConfig reducedMotion="user">
       <Preloader progress={progress} onComplete={handleComplete} />
       <Backdrop />
       <PerfumeScene onProgress={setProgress} ready={ready} />
@@ -51,11 +53,11 @@ export default function Home() {
         <Hero ready={ready} />
         <Manifesto />
         <Notes />
-        <Craft />
+        <Flacon />
         <Marquee />
         <Launch />
       </main>
       <Footer />
-    </>
+    </MotionConfig>
   );
 }

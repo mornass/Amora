@@ -11,7 +11,8 @@ const TEXT =
 function Word({ word, progress, range }: { word: string; progress: MotionValue<number>; range: [number, number] }) {
   // Fonctions JS (et non des plages) : pas d'accélération ScrollTimeline, rendu identique partout
   const opacity = useTransform(progress, (v) => 0.12 + 0.88 * Math.min(1, Math.max(0, (v - range[0]) / (range[1] - range[0]))));
-  const blur = useTransform(opacity, (o) => `blur(${(1 - o) * 4}px)`);
+  // Flou retiré dès que le mot est net : pas de calque filtré inutile pendant le scroll
+  const blur = useTransform(opacity, (o) => (o > 0.99 ? "none" : `blur(${(1 - o) * 4}px)`));
   return (
     <motion.span className="mr-[0.25em] inline-block" style={{ opacity, filter: blur }}>
       {word}

@@ -12,7 +12,10 @@ export const POSES: Record<string, { desktop: Pose; mobile: Pose }> = {
   right: { desktop: { x: 0.5, y: 0, s: 0.92 }, mobile: { x: 0.5, y: 0.6, s: 0.32 } },
   center: { desktop: { x: 0, y: 0, s: 1.08 }, mobile: { x: 0, y: 0.32, s: 0.62 } },
   left: { desktop: { x: -0.5, y: 0, s: 0.92 }, mobile: { x: 0, y: 0.5, s: 0.44 } },
-  outro: { desktop: { x: 0.5, y: 0.04, s: 0.8 }, mobile: { x: 0.68, y: -0.62, s: 0.3 } },
+  // Chapitre « Le flacon » : grand et centré, les annotations se placent autour
+  showcase: { desktop: { x: 0.02, y: -0.02, s: 1.2 }, mobile: { x: 0, y: 0.36, s: 0.5 } },
+  // Pied de page : le flacon se pose devant le grand « AMORA », en écho au hero
+  outro: { desktop: { x: 0, y: -0.06, s: 0.78 }, mobile: { x: 0, y: -0.2, s: 0.46 } },
 };
 
 type Anchor = {
@@ -109,10 +112,11 @@ export const TONES = {
   hero: { bg: "#a3101f", glow: "#ef2b34", liquid: "#8a0714" },
   manifesto: { bg: "#3b050c", glow: "#9c1020", liquid: "#7a0611" },
   top: { bg: "#b4231b", glow: "#ff6a3d", liquid: "#c0261a" },
-  heart: { bg: "#850a29", glow: "#ec3f72", liquid: "#a10a33" },
+  heart: { bg: "#850a29", glow: "#ec3f72", liquid: "#8c0620" },
   base: { bg: "#3e0d09", glow: "#b8501f", liquid: "#6a1a08" },
-  craft: { bg: "#650915", glow: "#d0222f", liquid: "#8a0714" },
-  launch: { bg: "#1c0407", glow: "#7a0b18", liquid: "#8a0714" },
+  flacon: { bg: "#4a0610", glow: "#c8202c", liquid: "#8a0714" },
+  launch: { bg: "#22050a", glow: "#8a0c1a", liquid: "#8a0714" },
+  outro: { bg: "#160305", glow: "#a3101f", liquid: "#8a0714" },
 } as const;
 
 export const tone = (name: keyof typeof TONES) => ({

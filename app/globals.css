@@ -16,12 +16,10 @@
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Variables pilotées au scroll par la scène 3D (triplets RGB) */
+/* Couleur de fond du chapitre courant (triplet RGB), pilotée au scroll par la scène 3D.
+   Le satin WebGL la recouvre ; elle reste visible aux rebonds de scroll. */
 :root {
   --bg: 163 16 31;
-  --glow: 239 43 52;
-  --gx: 50%;
-  --gy: 48%;
 }
 
 html {
@@ -81,4 +79,37 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .grain { animation: none; }
+}
+
+/* Texte roulant au survol (voir RollText) */
+.roll {
+  display: inline-flex;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.roll > span {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.7s var(--ease-expo);
+}
+.roll > span::after {
+  content: attr(data-c);
+  position: absolute;
+  left: 0;
+  top: 100%;
+}
+.group:hover .roll > span,
+.group:focus-visible .roll > span {
+  transform: translateY(-100%);
+}
+
+/* Le curseur personnalisé remplace celui du système sur les pointeurs précis */
+html.has-cursor,
+html.has-cursor * {
+  cursor: none !important;
+}
+
+:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: 4px;
 }

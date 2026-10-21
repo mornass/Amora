@@ -1,20 +1,38 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useMotionValue, useScroll, useSpring, useTransform } from "motion/react";
+import { motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
 import { ArrowDown } from "lucide-react";
 import { EASE_EXPO, LAUNCH_LABEL } from "@/lib/launch";
 import { tone } from "@/lib/chapters";
 import { Reveal } from "./Reveal";
 
 const TITLE = "AMORA".split("");
+// Vitesse de sortie de chaque lettre : les bords filent, le « O » derrière le flacon traîne
+const SPEEDS = [1.5, 1.1, 0.6, 1.1, 1.5];
+
+function Letter({ letter, index, ready, progress }: { letter: string; index: number; ready: boolean; progress: MotionValue<number> }) {
+  const y = useTransform(progress, (v) => `${-v * SPEEDS[index] * 55}%`);
+  return (
+    <motion.span aria-hidden className="inline-block overflow-hidden py-[0.06em]" style={{ y }}>
+      <motion.span
+        className="inline-block"
+        initial={{ y: "110%", filter: "blur(12px)" }}
+        animate={ready ? { y: "0%", filter: "blur(0px)" } : {}}
+        transition={{ duration: 1.8, ease: EASE_EXPO, delay: 0.1 + index * 0.09 }}
+      >
+        {letter}
+      </motion.span>
+    </motion.span>
+  );
+}
 
 export function Hero({ ready }: { ready: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const titleY = useTransform(scrollYProgress, [0, 1], ["0%", "-40%"]);
+  const titleY = useTransform(scrollYProgress, [0, 1], ["0%", "-25%"]);
   const titleScale = useTransform(scrollYProgress, [0, 1], [1, 0.82]);
-  const titleBlur = useTransform(scrollYProgress, (v) => `blur(${v * 14}px)`);
+  const titleBlur = useTransform(scrollYProgress, (v) => (v < 0.01 ? "none" : `blur(${v * 14}px)`));
   const fade = useTransform(scrollYProgress, (v) => Math.max(0, 1 - v * 4));
 
   // Légère parallaxe du titre géant à la souris
@@ -48,16 +66,7 @@ export function Hero({ ready }: { ready: boolean }) {
       >
         <span className="sr-only">Amora</span>
         {TITLE.map((letter, i) => (
-          <span key={i} aria-hidden className="inline-block overflow-hidden py-[0.06em]">
-            <motion.span
-              className="inline-block"
-              initial={{ y: "110%", filter: "blur(12px)" }}
-              animate={ready ? { y: "0%", filter: "blur(0px)" } : {}}
-              transition={{ duration: 1.8, ease: EASE_EXPO, delay: 0.1 + i * 0.09 }}
-            >
-              {letter}
-            </motion.span>
-          </span>
+          <Letter key={i} letter={letter} index={i} ready={ready} progress={scrollYProgress} />
         ))}
       </motion.h1>
 
