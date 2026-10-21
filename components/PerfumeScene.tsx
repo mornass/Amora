@@ -5,17 +5,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useScroll, useSpring, useVelocity } from "motion/react";
-
-type Pose = { x: number; y: number; s: number };
-
-// x / y : fraction de la demi-largeur / demi-hauteur visible — s : échelle
-const POSES: Record<string, { desktop: Pose; mobile: Pose }> = {
-  hero: { desktop: { x: 0, y: -0.06, s: 1 }, mobile: { x: 0, y: 0.02, s: 0.82 } },
-  right: { desktop: { x: 0.46, y: 0, s: 0.95 }, mobile: { x: 0.5, y: 0.6, s: 0.32 } },
-  center: { desktop: { x: 0, y: 0, s: 1.1 }, mobile: { x: 0, y: 0.3, s: 0.66 } },
-  left: { desktop: { x: -0.48, y: 0, s: 0.95 }, mobile: { x: 0, y: 0.5, s: 0.46 } },
-  outro: { desktop: { x: -0.5, y: 0.04, s: 0.82 }, mobile: { x: 0.68, y: -0.62, s: 0.32 } },
-};
+import { CHAPTER_EVENT, POSES, measureChapters, sampleChapters, toTriplet } from "@/lib/chapters";
+import { sceneState } from "@/lib/sceneState";
 
 // Nombre de tours complets du flacon sur toute la page
 const TURNS = 2;
@@ -25,6 +16,22 @@ type Props = {
   ready: boolean;
 };
 
+// Texture ronde et douce pour les particules
+function sparkTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.25, "rgba(255,236,200,0.75)");
+  grad.addColorStop(1, "rgba(255,220,170,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function PerfumeScene({ onProgress, ready }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const readyRef = useRef(ready);
@@ -32,20 +39,22 @@ export function PerfumeScene({ onProgress, ready }: Props) {
   const onProgressRef = useRef(onProgress);
   onProgressRef.current = onProgress;
 
-  // Le scroll pilote la rotation : progression lissée par un ressort
+  // Le scroll pilote la rotation (Lenis lisse déjà le défilement, le ressort arrondit le reste)
   const { scrollYProgress, scrollY } = useScroll();
-  const rotation = useSpring(scrollYProgress, { stiffness: 70, damping: 22, mass: 0.6 });
+  const rotation = useSpring(scrollYProgress, { stiffness: 90, damping: 26, mass: 0.5 });
   const velocity = useSpring(useVelocity(scrollY), { stiffness: 120, damping: 30 });
 
   useEffect(() => {
     const canvas = canvasRef.current!;
+    const root = document.documentElement;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    // Neutral : conserve la saturation des rouges (ACES les délave vers le rose)
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
 
     const scene = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -54,46 +63,91 @@ export function PerfumeScene({ onProgress, ready }: Props) {
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
     camera.position.set(0, 0, 9);
+    // Matrice monde à jour dès le départ : project() est appelé avant le premier rendu
+    camera.updateMatrixWorld();
 
-    const key = new THREE.DirectionalLight(0xffe4cc, 2.4);
+    const key = new THREE.DirectionalLight(0xfff0e0, 2.2);
     key.position.set(3, 5, 6);
-    const rim = new THREE.PointLight(0xff2a2a, 45, 14);
+    const rim = new THREE.PointLight(0xff2a2a, 50, 14);
     rim.position.set(-3.5, 1.5, -2.5);
-    const warm = new THREE.PointLight(0xe6c08a, 18, 12);
+    const warm = new THREE.PointLight(0xe8c08a, 16, 12);
     warm.position.set(3, -2.5, 3);
     scene.add(key, rim, warm);
 
-    // pivot : position/échelle selon la section — inner : rotation pilotée par le scroll
+    // pivot : position/échelle par chapitre — inner : rotation pilotée par le scroll
     const pivot = new THREE.Group();
     const inner = new THREE.Group();
     pivot.add(inner);
     scene.add(pivot);
 
+    // Verre : uniquement ses reflets, ajoutés à l'image sans toucher l'alpha.
+    // Un verre réel ne diffuse presque pas de lumière : un voile blanc rosissait le jus.
     const glass = new THREE.MeshPhysicalMaterial({
-      color: 0xffe9e4,
-      roughness: 0.03,
-      transparent: true,
-      opacity: 0.16,
+      color: 0x000000,
+      roughness: 0.02,
       clearcoat: 1,
-      clearcoatRoughness: 0.04,
-      envMapIntensity: 1.8,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 1.5,
       side: THREE.DoubleSide,
+      transparent: true,
       depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneFactor,
+      blendSrcAlpha: THREE.ZeroFactor,
+      blendDstAlpha: THREE.OneFactor,
     });
     const liquid = new THREE.MeshPhysicalMaterial({
-      color: 0x7a0410,
-      emissive: 0x3a0006,
-      roughness: 0.05,
-      clearcoat: 1,
+      color: 0x8a0714,
+      roughness: 0.04,
+      clearcoat: 0.5,
       clearcoatRoughness: 0.02,
-      envMapIntensity: 1.1,
+      specularIntensity: 0.5,
+      envMapIntensity: 0.3,
     });
+    // Bords plus sombres, cœur lumineux : l'épaisseur du jus se lit comme un volume
+    liquid.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        "outgoingLight *= mix(1.0, 0.22, pow(1.0 - saturate(dot(normal, geometryViewDir)), 1.5));\n#include <opaque_fragment>"
+      );
+    };
     const cap = new THREE.MeshStandardMaterial({
-      color: 0xe6c08a,
+      color: 0xe2bd85,
       metalness: 1,
-      roughness: 0.2,
-      envMapIntensity: 1.8,
+      roughness: 0.18,
+      envMapIntensity: 1.6,
     });
+
+    /* ----- Particules dorées en suspension autour du flacon ----- */
+    const COUNT = 420;
+    const positions = new Float32Array(COUNT * 3);
+    const seeds = new Float32Array(COUNT);
+    for (let i = 0; i < COUNT; i++) {
+      const r = 1.6 + Math.random() * 3.2;
+      const theta = Math.random() * Math.PI * 2;
+      positions[i * 3] = Math.cos(theta) * r;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 5;
+      positions[i * 3 + 2] = Math.sin(theta) * r - 1;
+      seeds[i] = Math.random() * Math.PI * 2;
+    }
+    const base = positions.slice();
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const sparkTex = sparkTexture();
+    const sparkMat = new THREE.PointsMaterial({
+      map: sparkTex,
+      color: 0xf2cf98,
+      size: 0.07,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const sparks = new THREE.Points(sparkGeo, sparkMat);
+    pivot.add(sparks);
 
     let model: THREE.Object3D | null = null;
     new GLTFLoader().load(
@@ -133,9 +187,10 @@ export function PerfumeScene({ onProgress, ready }: Props) {
       }
     );
 
-    /* ----- Ancrages : une pose par section [data-bottle] ----- */
-    let anchors: { at: number; pose: string }[] = [];
+    /* ----- Mesures ----- */
+    let anchors = measureChapters();
     let view = { w: 1, h: 1 };
+    let viewport = { w: 1, h: 1 };
     let mobile = false;
 
     const measure = () => {
@@ -147,43 +202,8 @@ export function PerfumeScene({ onProgress, ready }: Props) {
       mobile = w < 768;
       const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
       view = { w: halfH * camera.aspect, h: halfH };
-
-      anchors = [];
-      document.querySelectorAll<HTMLElement>("[data-bottle]").forEach((el) => {
-        const top = el.getBoundingClientRect().top + window.scrollY;
-        const pose = el.dataset.bottle!;
-        // Les sections « sticky » gardent la pose pendant toute leur durée
-        if (el.offsetHeight > h * 1.4) {
-          anchors.push({ at: top, pose }, { at: top + el.offsetHeight - h, pose });
-        } else {
-          anchors.push({ at: top + el.offsetHeight / 2 - h / 2, pose });
-        }
-      });
-      // Bornés à la plage réellement scrollable : la dernière pose est atteinte en bas de page
-      const max = document.documentElement.scrollHeight - h;
-      anchors.forEach((a) => (a.at = Math.min(Math.max(a.at, 0), max)));
-    };
-
-    const ease = (t: number) => t * t * (3 - 2 * t);
-    const poseAt = (scroll: number): Pose => {
-      const get = (name: string) => (mobile ? POSES[name].mobile : POSES[name].desktop);
-      if (!anchors.length) return get("hero");
-      if (scroll <= anchors[0].at) return get(anchors[0].pose);
-      for (let i = 0; i < anchors.length - 1; i++) {
-        const a = anchors[i];
-        const b = anchors[i + 1];
-        if (scroll <= b.at) {
-          const t = b.at === a.at ? 1 : ease((scroll - a.at) / (b.at - a.at));
-          const pa = get(a.pose);
-          const pb = get(b.pose);
-          return {
-            x: pa.x + (pb.x - pa.x) * t,
-            y: pa.y + (pb.y - pa.y) * t,
-            s: pa.s + (pb.s - pa.s) * t,
-          };
-        }
-      }
-      return get(anchors[anchors.length - 1].pose);
+      viewport = { w, h };
+      anchors = measureChapters();
     };
 
     const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
@@ -199,6 +219,17 @@ export function PerfumeScene({ onProgress, ready }: Props) {
     window.addEventListener("pointermove", onPointer);
 
     const current = { ...POSES.hero.desktop };
+    const liquidColor = new THREE.Color();
+    const glowColor = new THREE.Color();
+    const projected = new THREE.Vector3();
+    // Repères du flacon pour les annotations : bouchon et jus suivent la rotation, le verre reste sur le bord
+    const marks: { point: THREE.Vector3; space: THREE.Object3D }[] = [
+      { point: new THREE.Vector3(0, 1.05, 0), space: inner },
+      { point: new THREE.Vector3(0.46, -0.05, 0), space: pivot },
+      { point: new THREE.Vector3(0, -0.5, 0), space: inner },
+    ];
+    let lastBg = "";
+    let label = "";
     let intro = 0;
     const timer = new THREE.Timer();
     timer.connect(document);
@@ -207,32 +238,72 @@ export function PerfumeScene({ onProgress, ready }: Props) {
     const tick = (now: number) => {
       timer.update(now);
       const t = reduced ? 0 : timer.getElapsed();
-      const k = reduced ? 1 : 0.075;
-      const target = poseAt(window.scrollY);
-      current.x += (target.x - current.x) * k;
-      current.y += (target.y - current.y) * k;
-      current.s += (target.s - current.s) * k;
+      const k = reduced ? 1 : 0.085;
+
+      const chapter = sampleChapters(anchors, window.scrollY, mobile);
+      if (chapter) {
+        current.x += (chapter.pose.x - current.x) * k;
+        current.y += (chapter.pose.y - current.y) * k;
+        current.s += (chapter.pose.s - current.s) * k;
+
+        // Couleurs du chapitre : fond en soie (via l'état partagé), jus et lumière de contour (3D)
+        sceneState.bg = chapter.bg;
+        sceneState.glow = chapter.glow;
+        const bg = toTriplet(chapter.bg);
+        if (bg !== lastBg) {
+          // Fond de la page sous le canvas (rebonds de scroll) : écrit seulement s'il change
+          root.style.setProperty("--bg", bg);
+          lastBg = bg;
+        }
+        liquidColor.setRGB(chapter.liquid[0] / 255, chapter.liquid[1] / 255, chapter.liquid[2] / 255, THREE.SRGBColorSpace);
+        liquid.color.lerp(liquidColor, 0.12);
+        liquid.emissive.copy(liquid.color).multiplyScalar(0.14);
+        glowColor.setRGB(chapter.glow[0] / 255, chapter.glow[1] / 255, chapter.glow[2] / 255, THREE.SRGBColorSpace);
+        rim.color.lerp(glowColor, 0.1);
+
+        if (chapter.label !== label) {
+          label = chapter.label;
+          window.dispatchEvent(new CustomEvent(CHAPTER_EVENT, { detail: label }));
+        }
+      }
 
       // Entrée du flacon une fois le preloader terminé
-      intro += ((readyRef.current ? 1 : 0) - intro) * (reduced ? 1 : 0.035);
+      intro += ((readyRef.current ? 1 : 0) - intro) * (reduced ? 1 : 0.03);
       const introEase = 1 - Math.pow(1 - intro, 3);
 
       pointer.sx += (pointer.x - pointer.sx) * 0.05;
       pointer.sy += (pointer.y - pointer.sy) * 0.05;
 
-      pivot.position.set(
-        current.x * view.w,
-        current.y * view.h - (1 - introEase) * 2.2,
-        0
-      );
-      pivot.scale.setScalar(current.s * (0.6 + introEase * 0.4));
+      pivot.position.set(current.x * view.w, current.y * view.h - (1 - introEase) * 2.4, 0);
+      pivot.scale.setScalar(current.s * (0.55 + introEase * 0.45));
 
-      const tilt = THREE.MathUtils.clamp(velocity.get() / 3500, -1, 1);
+      const v = velocity.get();
+      const tilt = Number.isFinite(v) ? THREE.MathUtils.clamp(v / 3500, -1, 1) : 0;
       inner.rotation.y =
-        rotation.get() * Math.PI * 2 * TURNS - (1 - introEase) * Math.PI * 1.2 + pointer.sx * 0.3;
-      inner.rotation.x = pointer.sy * 0.12 + tilt * 0.18;
-      inner.rotation.z = Math.sin(t * 0.7) * 0.035 - tilt * 0.12;
+        rotation.get() * Math.PI * 2 * TURNS - (1 - introEase) * Math.PI * 1.4 + pointer.sx * 0.3;
+      inner.rotation.x = pointer.sy * 0.12 + tilt * 0.16;
+      inner.rotation.z = Math.sin(t * 0.7) * 0.035 - tilt * 0.1;
       inner.position.y = Math.sin(t * 1.1) * 0.07;
+
+      // Particules : dérive lente, secouées par la vitesse de scroll
+      sparks.rotation.y = t * 0.04 + rotation.get() * Math.PI * 0.8;
+      sparkMat.opacity = 0.85 * introEase;
+      for (let i = 0; i < COUNT; i++) {
+        const s = seeds[i];
+        positions[i * 3 + 1] = base[i * 3 + 1] + Math.sin(t * 0.4 + s) * 0.18 - tilt * 0.6 * Math.sin(s);
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+
+      // Position du flacon à l'écran : halo du fond et annotations
+      sceneState.velocity = tilt;
+      projected.copy(pivot.position).project(camera);
+      sceneState.glowPos = [(projected.x + 1) / 2, (projected.y + 1) / 2];
+      pivot.updateMatrixWorld(true);
+      marks.forEach((m, i) => {
+        projected.copy(m.point);
+        m.space.localToWorld(projected).project(camera);
+        sceneState.points[i] = [((projected.x + 1) / 2) * viewport.w, ((1 - projected.y) / 2) * viewport.h];
+      });
 
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -245,7 +316,9 @@ export function PerfumeScene({ onProgress, ready }: Props) {
       ro.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("pointermove", onPointer);
-      [glass, liquid, cap].forEach((m) => m.dispose());
+      [glass, liquid, cap, sparkMat].forEach((m) => m.dispose());
+      sparkGeo.dispose();
+      sparkTex.dispose();
       model?.traverse((obj) => obj instanceof THREE.Mesh && obj.geometry.dispose());
       envTexture.dispose();
       pmrem.dispose();

@@ -57,14 +57,14 @@ export function Preloader({ progress, onComplete }: Props) {
         >
           {/* Rideau arrière plus clair : crée la profondeur pendant la sortie */}
           <motion.div
-            className="absolute inset-0 bg-scarlet"
+            className="absolute inset-0 bg-rouge"
             initial={{ clipPath: "inset(0% 0% 0% 0%)" }}
             exit={{ clipPath: "inset(0% 0% 100% 0%)" }}
-            transition={{ duration: 1.2, ease: EASE_EXPO, delay: 0.18 }}
+            transition={{ duration: 1.3, ease: EASE_EXPO, delay: 0.2 }}
           />
 
           <motion.div
-            className="absolute inset-0 flex flex-col justify-between overflow-hidden bg-blood p-5 text-cream md:p-10"
+            className="absolute inset-0 flex flex-col justify-between overflow-hidden bg-ink p-5 text-cream md:p-10"
             initial={{ clipPath: "inset(0% 0% 0% 0%)" }}
             exit={{ clipPath: "inset(0% 0% 100% 0%)" }}
             transition={{ duration: 1.1, ease: EASE_EXPO }}
